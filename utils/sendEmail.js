@@ -10,14 +10,14 @@ const sendEmail = async (to, subject, text) => {
       },
     });
 
-    await transporter.sendMail({
+    const res =  await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to,
       subject,
       text,
     });
 
-    console.log(`Email sent to ${to}`);
+    console.log(res);
   } catch (error) {
     console.error("Error sending email:", error.message);
   }

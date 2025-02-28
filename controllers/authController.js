@@ -42,32 +42,34 @@ exports.register = async (req, res) => {
   }
 };
 
+// Verify OTP Handler
 exports.verifyOTP = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { otp } = req.body;
+    const { email } = req.session.tempUser;
 
-    // Find OTP in database
-    const otpRecord = await OTP.findOne({ email, otp });
-
-    if (!otpRecord) {
+    // Check if OTP exists
+    const existingOTP = await OTP.findOne({ email, otp });
+    if (!existingOTP) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
-    // Check if OTP is expired
-    if (new Date() > otpRecord.expiresAt) {
-      return res.status(400).json({ message: "OTP expired" });
+    // Check if OTP has expired
+    if (existingOTP.expiresAt < new Date()) {
+      return res.status(400).json({ message: "OTP has expired" });
     }
 
-    // Remove OTP from database after verification
-    await OTP.deleteOne({ _id: otpRecord._id });
-
-    // Retrieve user details from session (or temporary storage)
+    // Create User
     const { name, password } = req.session.tempUser;
+    await User.create({ name, email, password, isVerified: true });
 
-    // Save user to the database
-    const newUser = await User.create({ name, email, password });
+    // Delete OTP
+    await OTP.deleteOne({ email });
 
-    return res.status(201).json({ message: "Account created successfully", user: newUser });
+    // Clear tempUser from session
+    delete req.session.tempUser;
+
+    return res.status(200).json({ message: "User registered successfully" });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
