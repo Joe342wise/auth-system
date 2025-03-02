@@ -1,25 +1,16 @@
-// const express = require("express");
-// const connectDB = require("./config/db");
-// const authRoutes = require("./routes/auth");
-// require("dotenv").config();
-
-// const app = express();
-// connectDB();
-
-// app.use(express.json());
-// app.use("/api/auth", authRoutes);
-
-// app.listen(5000, () => console.log("Server running on port 5000"));
-
 const mongoose = require("mongoose");
 const session = require("express-session");
 const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const express = require("express");
 const connectDB = require("./config/db");
+const  passport = require("passport");
 
 // Load environment variables
 dotenv.config();
+
+// Load Google OAuth Config
+require("./config/passport");
 
 // Initialize Express app
 const app = express();
@@ -37,6 +28,10 @@ app.use(session({
   saveUninitialized: true,
   cookie: { secure: false } // Set to true in production with HTTPS
 }));
+
+// Passport Middleware
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Authentication Routes
 app.use("/api/auth", authRoutes);
