@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const session = require("express-session");
 const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
+const protectedRoutes = require("./routes/protectedRoutes");
 const express = require("express");
 const connectDB = require("./config/db");
 const  passport = require("passport");
@@ -35,6 +36,7 @@ app.use(passport.session());
 
 // Authentication Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/protected", protectedRoutes);
 
 // Set up the server
 const PORT = process.env.PORT || 5000;
