@@ -1,5 +1,6 @@
 const User = require("../models/user");
 const OTP = require("../models/otp");
+const passwordReset = require("../models/passwordReset");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
@@ -91,7 +92,6 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ message: "Account not verified. Please verify your email first." });
     }
 
-    
     // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
 
@@ -103,6 +103,63 @@ exports.loginUser = async (req, res) => {
     const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
     return res.status(200).json({ message: "Login successful", token });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Request Password Reset (Send OTP)
+exports.requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const otp = generateOTP();
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    await PasswordReset.create({ email, otp, expiresAt });
+    await sendEmail(email, "Password Reset OTP", `Your OTP: ${otp}`);
+
+    return res.json({ message: "OTP sent to your email." });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Verify Password Reset OTP
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const resetEntry = await PasswordReset.findOne({ email, otp });
+
+    if (!resetEntry || resetEntry.expiresAt < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired OTP." });
+    }
+
+    return res.json({ message: "OTP verified. Proceed with password reset." });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const resetEntry = await PasswordReset.findOne({ email, otp });
+
+    if (!resetEntry || resetEntry.expiresAt < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired OTP." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.updateOne({ email }, { password: hashedPassword });
+    await PasswordReset.deleteOne({ email, otp });
+
+    return res.json({ message: "Password reset successful." });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
