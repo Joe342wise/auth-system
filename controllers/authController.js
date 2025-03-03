@@ -5,7 +5,6 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail"); // A function to send emails
-const { options } = require("../routes/authRoutes");
 
 // Generate Random OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -101,7 +100,7 @@ exports.loginUser = async (req, res) => {
     }
 
     // Generate JWT Token
-    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: "8h" });
 
     return res.status(200).json({ message: "Login successful", token });
   } catch (error) {
@@ -130,16 +129,19 @@ exports.requestPasswordReset = async (req, res) => {
   }
 };
 
+
+let otpStore = {}
 // Verify Password Reset OTP
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const resetEntry = await PasswordReset.findOne({ email, otp: opt.toString()});
+    const resetEntry = await PasswordReset.findOne({ email, otp });
 
-    if (!resetEntry || new Date(resetEntry.expiresAt) < new Date()) {
+    if (!resetEntry || resetEntry.expiresAt < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP." });
     }
 
+    otpStore[email] = otp;
     return res.json({ message: "OTP verified. Proceed with password reset." });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -149,8 +151,8 @@ exports.verifyOtp = async (req, res) => {
 // Reset Password
 exports.resetPassword = async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
-    const resetEntry = await PasswordReset.findOne({ email, otp });
+    const { email, newPassword } = req.body;
+    const resetEntry = await PasswordReset.findOne({ email, otp: otpStore[email] });
 
     if (!resetEntry || resetEntry.expiresAt < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP." });
@@ -158,7 +160,7 @@ exports.resetPassword = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await User.updateOne({ email }, { password: hashedPassword });
-    await PasswordReset.deleteOne({ email, otp });
+    await PasswordReset.deleteOne({ email, otp: otpStore[email] });
 
     return res.json({ message: "Password reset successful." });
   } catch (error) {
