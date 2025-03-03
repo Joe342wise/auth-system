@@ -1,10 +1,11 @@
 const User = require("../models/user");
 const OTP = require("../models/otp");
-const passwordReset = require("../models/passwordReset");
+const PasswordReset = require("../models/passwordReset");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail"); // A function to send emails
+const { options } = require("../routes/authRoutes");
 
 // Generate Random OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -133,9 +134,9 @@ exports.requestPasswordReset = async (req, res) => {
 exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const resetEntry = await PasswordReset.findOne({ email, otp });
+    const resetEntry = await PasswordReset.findOne({ email, otp: opt.toString()});
 
-    if (!resetEntry || resetEntry.expiresAt < Date.now()) {
+    if (!resetEntry || new Date(resetEntry.expiresAt) < new Date()) {
       return res.status(400).json({ message: "Invalid or expired OTP." });
     }
 
