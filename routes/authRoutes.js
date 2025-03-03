@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
-const { register, verifyOTP, loginUser, requestPasswordReset, verifyOtp, resetPassword } = require("../controllers/authController");
+const { register, verifyOTP, loginUser, requestPasswordReset, verifyOtp, resetPassword, logout } = require("../controllers/authController");
 
 // Redirect to Google's OAuth page
 router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
@@ -33,5 +33,8 @@ router.post("/login", loginUser);
 router.post("/request-reset", requestPasswordReset);
 router.post("/verify-request-otp", verifyOtp);
 router.post("/reset-password", resetPassword);
+
+// Logout route
+router.post("/logout", logout);
 
 module.exports = router;

@@ -6,6 +6,8 @@ const protectedRoutes = require("./routes/protectedRoutes");
 const express = require("express");
 const connectDB = require("./config/db");
 const  passport = require("passport");
+const cron = require("node-cron");
+const TokenBlacklist = require("./models/tokenBlacklist");
 
 // Load environment variables
 dotenv.config();
@@ -37,6 +39,16 @@ app.use(passport.session());
 // Authentication Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/protected", protectedRoutes);
+
+// Schedule cron job to clean up expired blacklisted tokens daily at midnight
+cron.schedule("0 0 * * *", async () => {
+  try {
+    await TokenBlacklist.deleteMany({ expiresAt: { $lt: new Date() } });
+    console.log("Expired blacklisted tokens removed.");
+  } catch (error) {
+    console.error("Error removing expired tokens:", error);
+  }
+});
 
 // Set up the server
 const PORT = process.env.PORT || 5000;
