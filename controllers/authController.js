@@ -33,7 +33,13 @@ exports.register = async (req, res) => {
     await OTP.create({ email, otp, expiresAt: otpExpiration });
 
     // Send OTP via email
-    await sendEmail(email, "Verify Your Account", `Your OTP is: ${otp}`);
+    await sendEmail(
+      email,
+      "Verify Your Account",
+      `<h1>Account Verification</h1>
+      <p>Your OTP is: <strong>${otp}</strong></p>`
+    );
+
 
     // Store user details in session or temp storage (before OTP verification)
     req.session.tempUser = { name, email, password: hashedPassword };
@@ -155,7 +161,12 @@ exports.requestPasswordReset = async (req, res) => {
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
     await PasswordReset.create({ email, otp, expiresAt });
-    await sendEmail(email, "Password Reset OTP", `Your OTP: ${otp}`);
+    await sendEmail(
+      email,
+      "Verify Your Account",
+      `<h1>Account Verification</h1>
+      <p>Your OTP is: <strong>${otp}</strong></p>`
+    );
 
     return res.json({ message: "OTP sent to your email." });
   } catch (error) {
